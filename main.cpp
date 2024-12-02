@@ -1,13 +1,17 @@
 #include <SFML/Graphics.hpp>
 #include <GL/glew.h>
 #include <iostream>
+#include <cstdlib> // Для случайных чисел
+#include <vector>
 
 // ID шейдерной программы
 GLuint Program;
-// ID атрибута
-GLint Attrib_vertex;
+// ID атрибутов
+GLint Attrib_vertex, Attrib_color;
+// ID uniform-переменной для цвета
+GLint Uniform_color;
 // ID Vertex Buffer Object
-GLuint VBO;
+GLuint VBO, VBO_colors;
 
 struct Vertex
 {
@@ -17,23 +21,63 @@ struct Vertex
 
 int current_vertex_count = 3;
 int shape_type = 0;
+int color_mode = 0;
 std::vector<Vertex> figure;
+std::vector<GLfloat> colors; // Массив цветов для вершин
 
-// Исходный код вершинного шейдера
+// Цвет фигуры задается константой
 const char* VertexShaderSource = R"(
  #version 330 core
  in vec2 coord;
  void main() {
- gl_Position = vec4(coord, 0.0, 1.0);
+    gl_Position = vec4(coord, 0.0, 1.0);
  }
 )";
 
-// Исходный код фрагментного шейдера
 const char* FragShaderSource = R"(
  #version 330 core
  out vec4 color;
  void main() {
- color = vec4(0, 1, 0, 1);
+    color = vec4(1, 1, 1, 1);
+ }
+)";
+
+// Цвет задается uniform-переменной
+const char* VertexShaderSourceUniform = R"(
+ #version 330 core
+ in vec2 coord;
+ void main() {
+    gl_Position = vec4(coord, 0.0, 1.0);
+ }
+)";
+
+const char* FragShaderSourceUniform = R"(
+ #version 330 core
+ uniform vec4 color;
+ out vec4 fragColor;
+ void main() {
+     fragColor = color;
+ }
+)";
+
+// Градиент
+const char* VertexShaderSourceGrad = R"(
+ #version 330 core
+ in vec2 coord;
+ in vec3 color;
+ out vec3 vertex_color;
+ void main() {
+     gl_Position = vec4(coord, 0.0, 1.0);
+     vertex_color = color; // Передаем цвет в фрагментный шейдер
+ }
+)";
+
+const char* FragShaderSourceGrad = R"(
+ #version 330 core
+ in vec3 vertex_color;
+ out vec4 color;
+ void main() {
+     color = vec4(vertex_color, 1.0); // Закрашиваем пиксель цветом из вершины
  }
 )";
 
@@ -56,8 +100,25 @@ void InitShader()
     // Создаем вершинный шейдер
     GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
 
+    // Создаем фрагментный шейдер
+    GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
+
     // Передаем исходный код
-    glShaderSource(vShader, 1, &VertexShaderSource, NULL);
+    switch (color_mode)
+    {
+    case 0:
+        glShaderSource(vShader, 1, &VertexShaderSource, NULL);
+        glShaderSource(fShader, 1, &FragShaderSource, NULL);
+        break;
+    case 1:
+        glShaderSource(vShader, 1, &VertexShaderSourceUniform, NULL);
+        glShaderSource(fShader, 1, &FragShaderSourceUniform, NULL);
+        break;
+    case 2:
+        glShaderSource(vShader, 1, &VertexShaderSourceGrad, NULL);
+        glShaderSource(fShader, 1, &FragShaderSourceGrad, NULL);
+        break;
+    }
 
     // Компилируем шейдер
     glCompileShader(vShader);
@@ -65,12 +126,6 @@ void InitShader()
 
     // Функция печати лога шейдера
     ShaderLog(vShader);
-
-    // Создаем фрагментный шейдер
-    GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-    // Передаем исходный код
-    glShaderSource(fShader, 1, &FragShaderSource, NULL);
 
     // Компилируем шейдер
     glCompileShader(fShader);
@@ -97,61 +152,65 @@ void InitShader()
         return;
     }
 
-    // Вытягиваем ID атрибута из собранной программы
-    const char* attr_name = "coord"; //имя в шейдере
-    Attrib_vertex = glGetAttribLocation(Program, attr_name);
+    // Вытягиваем ID атрибутов из собранной программы
+    Attrib_vertex = glGetAttribLocation(Program, "coord");
+    if (color_mode == 2)
+        Attrib_color = glGetAttribLocation(Program, "color");
 
-    if (Attrib_vertex == -1)
+    if (Attrib_vertex == -1 || Attrib_color == -1)
     {
-        std::cout << "could not bind attrib " << attr_name << std::endl;
+        std::cout << "could not bind attribs" << std::endl;
         return;
+    }
+
+    if (color_mode == 1)
+    {
+        Uniform_color = glGetUniformLocation(Program, "color");
+        if (Uniform_color == -1)
+        {
+            std::cout << "could not bind uniform 'color'" << std::endl;
+            return;
+        }
     }
 }
 
 void InitVBO()
 {
     glGenBuffers(1, &VBO);
+    glGenBuffers(1, &VBO_colors);
 
     figure.clear();
+    colors.clear();
 
     switch (shape_type)
     {
-    case 0:
+    case 0: // Треугольник
         figure = {
             {-0.5f, -0.5f},
             {0.0f, 0.5f},
             {0.5f, -0.5f}
         };
-
         current_vertex_count = 3;
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
         break;
-    case 1:
+    case 1: // Прямоугольник
         figure = {
             {-0.5f, -0.5f},
             {-0.5f, 0.5f},
             {0.5f, 0.5f},
             {0.5f, -0.5f}
         };
-
         current_vertex_count = 4;
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
         break;
-    case 2:
+    case 2: // Треугольник с центральной вершиной
         figure = {
             {0.0f, 0.0f},
             {-0.5f, -0.5f},
             {0.5f, -0.5f},
             {0.0f, 0.5f}
         };
-
         current_vertex_count = 4;
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
         break;
-    case 3:
+    case 3: // Пятиугольник
         figure = {
             {0.0f, 0.5f},
             {-0.5f, 0.15f},
@@ -159,36 +218,76 @@ void InitVBO()
             {0.3f, -0.4f},
             {0.5f, 0.15f}
         };
-
         current_vertex_count = 5;
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
         break;
+    }
+
+    // Передаем данные в VBO для вершин
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
+
+
+    // Генерация случайных цветов для каждой вершины
+    if (color_mode == 2)
+    {
+        for (int i = 0; i < current_vertex_count; ++i)
+        {
+            colors.push_back(static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
+            colors.push_back(static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
+            colors.push_back(static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
+        }
+        // Передаем данные в VBO для цветов
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
+        glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(GLfloat), colors.data(), GL_STATIC_DRAW);
     }
 }
 
 void Init()
 {
-    // Шейдеры
+    // Инициализация шейдеров и буферов
     InitShader();
-    // Вершинный буфер
     InitVBO();
 }
 
 void Draw()
 {
     glUseProgram(Program); // Устанавливаем шейдерную программу текущей
-    glEnableVertexAttribArray(Attrib_vertex); // Включаем массив атрибутов
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); // Подключаем VBO
+    glEnableVertexAttribArray(Attrib_vertex); // Включаем атрибут вершин
+    glBindBuffer(GL_ARRAY_BUFFER, VBO); // Подключаем VBO для координат вершин
+    glVertexAttribPointer(Attrib_vertex, 2, GL_FLOAT, GL_FALSE, 0, 0); // Передаем координаты вершин
 
-    // сообщаем OpenGL как он должен интерпретировать вершинные данные.
-    glVertexAttribPointer(Attrib_vertex, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    if (color_mode == 2)
+    {
+        glEnableVertexAttribArray(Attrib_color); // Включаем атрибут для цвета
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_colors); // Подключаем VBO для цветов
+        glVertexAttribPointer(Attrib_color, 3, GL_FLOAT, GL_FALSE, 0, 0); // Передаем цвета для каждой вершины
+    }
+
     glBindBuffer(GL_ARRAY_BUFFER, 0); // Отключаем VBO
-    //glDrawArrays(GL_LINE_STRIP, 0, 4); // Передаем данные на видеокарту(рисуем)
-    glDrawArrays(GL_TRIANGLE_FAN, 0, current_vertex_count);
-    //glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    glDisableVertexAttribArray(Attrib_vertex); // Отключаем массив атрибутов
+    switch (shape_type)
+    {
+    case 0:
+        glUniform4f(Uniform_color, 1.0f, 0.0f, 0.0f, 1.0f); // Красный
+        break;
+    case 1:
+        glUniform4f(Uniform_color, 0.0f, 1.0f, 0.0f, 1.0f); // Зеленый
+        break;
+    case 2:
+        glUniform4f(Uniform_color, 0.0f, 0.0f, 1.0f, 1.0f); // Синий
+        break;
+    case 3:
+        glUniform4f(Uniform_color, 1.0f, 1.0f, 0.0f, 1.0f); // Желтый
+        break;
+    }
+
+    glDrawArrays(GL_TRIANGLE_FAN, 0, current_vertex_count); // Рисуем фигуру
+
+    glDisableVertexAttribArray(Attrib_vertex); // Отключаем атрибут вершин
+
+    if (color_mode == 2)
+        glDisableVertexAttribArray(Attrib_color); // Отключаем атрибут цвета
+
     glUseProgram(0); // Отключаем шейдерную программу
 }
 
@@ -197,29 +296,26 @@ void ReleaseVBO()
 {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &VBO_colors);
 }
 
 // Освобождение шейдеров
 void ReleaseShader()
 {
-    // Передавая ноль, мы отключаем шейдерную программу
-    glUseProgram(0);
-    // Удаляем шейдерную программу
-    glDeleteProgram(Program);
+    glUseProgram(0); // Отключаем шейдерную программу
+    glDeleteProgram(Program); // Удаляем программу
 }
 
 void Release()
 {
-    // Шейдеры
+    // Освобождение ресурсов
     ReleaseShader();
-    // Вершинный буфер
     ReleaseVBO();
 }
 
-
 int main()
 {
-    sf::Window window(sf::VideoMode(600, 600), "The Green Triangle", sf::Style::Default, sf::ContextSettings(24));
+    sf::Window window(sf::VideoMode(600, 600), "Gradient Color Shapes", sf::Style::Default, sf::ContextSettings(24));
     window.setVerticalSyncEnabled(true);
     window.setActive(true);
     glewInit();
@@ -255,6 +351,19 @@ int main()
                 case sf::Keyboard::Num4:
                     shape_type = 3;
                     InitVBO();
+                    break;
+                case sf::Keyboard::Num8:
+                    color_mode = 0;
+                    InitShader();
+                    break;
+                case sf::Keyboard::Num9:
+                    color_mode = 1;
+                    InitShader();
+                    break;
+                case sf::Keyboard::Num0:
+                    color_mode = 2;
+                    InitVBO();
+                    InitShader();
                     break;
                 }
             }
