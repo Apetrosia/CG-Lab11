@@ -1,4 +1,12 @@
 ﻿  main.cpp
+C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\main.cpp(206,19): warning C4305: инициализация: усечение из "double" в "GLfloat"
+C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\main.cpp(207,14): warning C4305: инициализация: усечение из "double" в "GLfloat"
+C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\main.cpp(207,20): warning C4305: инициализация: усечение из "double" в "GLfloat"
+C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\main.cpp(208,20): warning C4305: инициализация: усечение из "double" в "GLfloat"
+C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\main.cpp(209,19): warning C4305: инициализация: усечение из "double" в "GLfloat"
+C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\main.cpp(210,19): warning C4305: инициализация: усечение из "double" в "GLfloat"
+C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\main.cpp(211,14): warning C4305: инициализация: усечение из "double" в "GLfloat"
+C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\main.cpp(211,19): warning C4305: инициализация: усечение из "double" в "GLfloat"
   CG-Lab11.vcxproj -> C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\x64\Debug\CG-Lab11.exe
   "pwsh.exe" не является внутренней или внешней
   командой, исполняемой программой или пакетным файлом.

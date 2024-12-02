@@ -201,14 +201,16 @@ void InitVBO()
         };
         current_vertex_count = 4;
         break;
-    case 2: // Треугольник с центральной вершиной
+    case 2: // Веер
         figure = {
-            {0.0f, 0.0f},
-            {-0.5f, -0.5f},
-            {0.5f, -0.5f},
-            {0.0f, 0.5f}
+            {0.0, -0.8},
+            {-0.8, 0.4},
+            {-0.5, 0.6},
+            {0.0, 0.8},
+            {0.5, 0.6},
+            {0.8, 0.4},
         };
-        current_vertex_count = 4;
+        current_vertex_count = 6;
         break;
     case 3: // Пятиугольник
         figure = {
@@ -315,7 +317,7 @@ void Release()
 
 int main()
 {
-    sf::Window window(sf::VideoMode(600, 600), "Gradient Color Shapes", sf::Style::Default, sf::ContextSettings(24));
+    sf::Window window(sf::VideoMode(600, 600), "Color figures", sf::Style::Default, sf::ContextSettings(24));
     window.setVerticalSyncEnabled(true);
     window.setActive(true);
     glewInit();
