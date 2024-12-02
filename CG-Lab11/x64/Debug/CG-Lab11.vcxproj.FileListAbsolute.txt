@@ -1,4 +1,0 @@
-C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\x64\Debug\glew32d.dll
-C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\x64\Debug\sfml-system-d-2.dll
-C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\x64\Debug\sfml-window-d-2.dll
-C:\Users\Apetrosia\Desktop\progr\CG\CG-Lab11\CG-Lab11\x64\Debug\CG-Lab11.vcxproj.Up2Date
