@@ -15,6 +15,10 @@ struct Vertex
     GLfloat y;
 };
 
+int current_vertex_count = 3;
+int shape_type = 0;
+std::vector<Vertex> figure;
+
 // Исходный код вершинного шейдера
 const char* VertexShaderSource = R"(
  #version 330 core
@@ -107,30 +111,60 @@ void InitShader()
 void InitVBO()
 {
     glGenBuffers(1, &VBO);
-    // Вершины нашего треугольника
-    Vertex figure[4] =
-    {
-        ///*
-        { -0.5f, -0.5f },
-        { -0.3f, 0.5f },
-        { 0.3f, 0.5f },
-        { 0.5f, -0.5f }
-        //*/
-        /*
-        { -0.5f, -0.5f },
-        { 0.0f, 0.5f },
-        { 0.5f, -0.5f }
-        */
-        /*
-        { -1.0f, -1.0f },
-        { 0.0f, 1.0f },
-        { 1.0f, -1.0f }
-        */
-    };
 
-    // Передаем вершины в буфер
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(figure), figure, GL_STATIC_DRAW);
+    figure.clear();
+
+    switch (shape_type)
+    {
+    case 0:
+        figure = {
+            {-0.5f, -0.5f},
+            {0.0f, 0.5f},
+            {0.5f, -0.5f}
+        };
+
+        current_vertex_count = 3;
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
+        break;
+    case 1:
+        figure = {
+            {-0.5f, -0.5f},
+            {-0.5f, 0.5f},
+            {0.5f, 0.5f},
+            {0.5f, -0.5f}
+        };
+
+        current_vertex_count = 4;
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
+        break;
+    case 2:
+        figure = {
+            {0.0f, 0.0f},
+            {-0.5f, -0.5f},
+            {0.5f, -0.5f},
+            {0.0f, 0.5f}
+        };
+
+        current_vertex_count = 4;
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
+        break;
+    case 3:
+        figure = {
+            {0.0f, 0.5f},
+            {-0.5f, 0.15f},
+            {-0.3f, -0.4f},
+            {0.3f, -0.4f},
+            {0.5f, 0.15f}
+        };
+
+        current_vertex_count = 5;
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, figure.size() * sizeof(Vertex), figure.data(), GL_STATIC_DRAW);
+        break;
+    }
 }
 
 void Init()
@@ -151,7 +185,7 @@ void Draw()
     glVertexAttribPointer(Attrib_vertex, 2, GL_FLOAT, GL_FALSE, 0, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0); // Отключаем VBO
     //glDrawArrays(GL_LINE_STRIP, 0, 4); // Передаем данные на видеокарту(рисуем)
-    glDrawArrays(GL_LINES, 0, 4);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, current_vertex_count);
     //glDrawArrays(GL_TRIANGLES, 0, 3);
 
     glDisableVertexAttribArray(Attrib_vertex); // Отключаем массив атрибутов
@@ -202,6 +236,28 @@ int main()
                 window.close();
             else if (event.type == sf::Event::Resized)
                 glViewport(0, 0, event.size.width, event.size.height);
+            if (event.type == sf::Event::KeyPressed)
+            {
+                switch (event.key.code)
+                {
+                case sf::Keyboard::Num1:
+                    shape_type = 0;
+                    InitVBO();
+                    break;
+                case sf::Keyboard::Num2:
+                    shape_type = 1;
+                    InitVBO();
+                    break;
+                case sf::Keyboard::Num3:
+                    shape_type = 2;
+                    InitVBO();
+                    break;
+                case sf::Keyboard::Num4:
+                    shape_type = 3;
+                    InitVBO();
+                    break;
+                }
+            }
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
