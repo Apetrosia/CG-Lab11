@@ -1,7 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <GL/glew.h>
 #include <iostream>
-#include <cstdlib> // Для случайных чисел
+#include <cstdlib>
 #include <vector>
 
 // ID шейдерной программы
